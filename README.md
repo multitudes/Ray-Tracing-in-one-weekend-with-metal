@@ -132,22 +132,17 @@ import MetalKit
 guard let device = MTLCreateSystemDefaultDevice() else {
   fatalError("GPU is not supported")
 }
-```
-Create the frame and the view to be displayed:
-```swift
+
+/* Create the frame and the view to be displayed on screen: */
 let frame = CGRect(x: 0, y: 0, width: 600, height: 600)
 let view = MTKView(frame: frame, device: device)
-```
-Create the CPU commandqueue
-```swift
 
+/* Create the CPU commandqueue */
 guard let queue = device.makeCommandQueue() else {
   fatalError("Could not create a command queue")
 }
-```
-get the shader file and initialize the pipeline state with the function I have in my shader.metal file.
 
-```swift
+/* get the shader file and initialize the pipeline state with the function I have in my shader.metal file. */
 var pipelineState: MTLComputePipelineState!
 do {
 	guard let path = Bundle.main.path(forResource: "Shaders", ofType: "metal") else { fatalError() }
@@ -159,8 +154,8 @@ do {
 } catch {
 	print(error)
 }
-```
-Then draw the view using the pipeline state and the command queue.
+
+/* Then draw the view using the pipeline state and the command queue. */
 ```swift
 guard let commandBuffer = queue.makeCommandBuffer(),
           let commandEncoder = commandBuffer.makeComputeCommandEncoder(),
@@ -184,6 +179,9 @@ commandEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPer
 commandEncoder.endEncoding()
 commandBuffer.present(drawable)
 commandBuffer.commit()
+
+
+PlaygroundPage.current.liveView = view
 ```
 
 The line `commandEncoder.setComputePipelineState(pipelineState)` is executed on the CPU, but it's setting up instructions for the GPU.  
@@ -194,7 +192,9 @@ In Metal, threads are organized into threadgroups, which are further organized i
 
 So, if you have a 256x256 image and your `threadExecutionWidth` is 16 (for example), you would have 16x16 threadgroups covering the entire image, and each threadgroup would process a 16x16 pixel block of the image.
 
-The `dispatchThreads` method is used to dispatch the threads to the GPU. The `threadsPerGrid` parameter specifies the number of threads in the grid, and the `threadsPerThreadgroup` parameter specifies the number of threads in each threadgroup. The GPU will execute the compute function for each thread in the grid, with each threadgroup processing a block of the image.
+The `dispatchThreads` method is used to dispatch the threads to the GPU. The `threadsPerGrid` parameter specifies the number of threads in the grid, and the `threadsPerThreadgroup` parameter specifies the number of threads in each threadgroup. The GPU will execute the compute function for each thread in the grid, with each threadgroup processing a block of the image.  
+
+
 
 ## Links
 - I am following the course [Raytracing in one weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)  
