@@ -91,6 +91,40 @@ Using SDFs, you can march along the ray until you get close enough to an object.
 ## Signed Distance Functions (SDF) 
 SDF describes the distance between any given point and the surface of an object in the scene. An SDF returns a negative number if the point is inside that object or positive otherwise.  
 
+Example of a shader function in Metal that renders a circle using SDF:
+
+```cpp
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void compute(texture2d<float, access::write> output [[texture(0)]],
+                    uint2 gid [[thread_position_in_grid]]) {
+  int width = output.get_width();
+  int height = output.get_height();
+  float2 uv = float2(gid) / float2(width, height);
+  uv = uv * 2.0 - 1.0;
+  float4 color = float4(0.41, 0.61, 0.86, 1.0);
+  
+  // SDF
+  float radius = 0.25;
+  float2 center = float2(0.0);
+  float distance = length(uv - center) - radius;
+  if (distance < 0.0) {
+	color = float4(1.0, 0.0, 0.0, 1.0); // red in rgba
+  }
+  
+  output.write(color, gid);
+}
+```
+
+- In Metal, a kernel function is a special type of function that can be called from your host code (running on the CPU) and executed on the GPU. Kernel functions are declared with the `kernel` keyword in Metal. They are used for compute operations, as opposed to graphics operations.
+- Each thread operates on a different piece of data, the thread position (`gid`) is a 2D coordinate that identifies a pixel in the `output` texture. Each thread is responsible for computing the color of one pixel, and the thread position tells it which pixel to compute. The `[[thread_position_in_grid]]` attribute in the function parameter tells the Metal shading language that `gid` should be automatically populated with the current thread's position when the function is called. 
+- In the above the lines : `` say that uv will start at the top left and it is normalized and then scaled to the range of -1 to 1. So the top left will be -1,-1 and the bottom right will be 1,1.
+- the float4 color is the color of the circle, the default is a blueish color.
+- The SDF in this case is calculated by finding the distance between the point and the center of the circle and then subtracting the radius. If the distance is less than 0, the point is inside the circle and the color is changed to yellow. The color is then written to the output texture at the current thread position.
+
+## Playground
+Open a playground on macos and select the blank template.  
 We start by importing the MetalKit framework and creating a reference to our GPU. At the same time the code checks if a suitable GPU is found if not it will stop here.
 ```swift
 import MetalKit
@@ -99,15 +133,68 @@ guard let device = MTLCreateSystemDefaultDevice() else {
   fatalError("GPU is not supported")
 }
 ```
+Create the frame and the view to be displayed:
+```swift
+let frame = CGRect(x: 0, y: 0, width: 600, height: 600)
+let view = MTKView(frame: frame, device: device)
+```
+Create the CPU commandqueue
+```swift
 
+guard let queue = device.makeCommandQueue() else {
+  fatalError("Could not create a command queue")
+}
+```
+get the shader file and initialize the pipeline state with the function I have in my shader.metal file.
 
+```swift
+var pipelineState: MTLComputePipelineState!
+do {
+	guard let path = Bundle.main.path(forResource: "Shaders", ofType: "metal") else { fatalError() }
+	let input = try String(contentsOfFile: path, encoding: String.Encoding.utf8)
+	let library = try device.makeLibrary(source: input, options: nil)
+	guard let kernel = library.makeFunction(name: "compute") else { fatalError() }
+	/*The compute pipeline state is created using the kernel function and the device.*/
+	pipelineState = try device.makeComputePipelineState(function: kernel)
+} catch {
+	print(error)
+}
+```
+Then draw the view using the pipeline state and the command queue.
+```swift
+guard let commandBuffer = queue.makeCommandBuffer(),
+          let commandEncoder = commandBuffer.makeComputeCommandEncoder(),
+          let drawable = view.currentDrawable else { fatalError() }
+/* the compute pipeline state is set on the command encoder. This tells the GPU which compute function to use for the computation.*/
+commandEncoder.setComputePipelineState(pipelineState)
 
-## Render a gradient
+commandEncoder.setTexture(drawable.texture, index: 0)
+/* the optimal number of threads that can run concurrently on the GPU. This value is hardware-dependent.*/
+let w = pipelineState.threadExecutionWidth
 
-## Render a sphere
+/*This calculates the height of a threadgroup based on the maximum number of threads that can be in a threadgroup and the previously calculated width.*/
+let h = pipelineState.maxTotalThreadsPerThreadgroup / w
+/*This creates a MTLSize object representing the size of a threadgroup. The third parameter is 1 because we're working with 2D data (an image), so the depth is 1.*/
+let threadsPerGroup = MTLSizeMake(w, h, 1)
+/*The grid size is the same as the image size because we want to process each pixel of the image.*/
+let threadsPerGrid = MTLSizeMake(Int(view.drawableSize.width),
+									Int(view.drawableSize.height), 1)
+/*This dispatches the threads to the GPU.*/
+commandEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerGroup)
+commandEncoder.endEncoding()
+commandBuffer.present(drawable)
+commandBuffer.commit()
+```
 
+The line `commandEncoder.setComputePipelineState(pipelineState)` is executed on the CPU, but it's setting up instructions for the GPU.  
+In Metal, the `MTLComputeCommandEncoder` object is used to encode (i.e., write) commands into a command buffer. These commands are then executed by the GPU.  
+The actual computation work done by the GPU is determined by the `pipelineState`, which includes a reference to the compute function to be used by the GPU.  
 
+In Metal, threads are organized into threadgroups, which are further organized into a grid that covers the entire computational domain. 
 
+So, if you have a 256x256 image and your `threadExecutionWidth` is 16 (for example), you would have 16x16 threadgroups covering the entire image, and each threadgroup would process a 16x16 pixel block of the image.
+
+The `dispatchThreads` method is used to dispatch the threads to the GPU. The `threadsPerGrid` parameter specifies the number of threads in the grid, and the `threadsPerThreadgroup` parameter specifies the number of threads in each threadgroup. The GPU will execute the compute function for each thread in the grid, with each threadgroup processing a block of the image.
 
 ## Links
 - I am following the course [Raytracing in one weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)  
