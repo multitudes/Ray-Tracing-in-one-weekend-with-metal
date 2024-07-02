@@ -4,12 +4,11 @@ I did a C version here: [Ray-Tracing-in-One-Weekend-in-C](https://github.com/mul
 
 Metal was announced at the Worldwide Developers Conference (WWDC) on June 2, 2014, an Apple alternative to Direct3D (which is part of DirectX - Windows) and OpenGL. Apple created a new language to program the GPU directly via shader functions. This is the Metal Shading Language (MSL) based on the C++11 specification. A year later at WWDC15, Apple announced two Metal sub-frameworks: MetalKit and Metal Performance Shaders (MPS). You typically usse Metal to have access to the GPU. GPUs belong to a special class of computation called Single Instruction Multiple Data (SIMD) and optimized for throughput (how much data can be processed in one unit of time).   
 
-The beauty of the book [Raytracing in one weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) is that it doesnt use any libraries and instead writes to a ppm file which is a very easy to understand and text based format. To use a high level framework like metal for such basic tasks will be small challenge. I am curious to see the tradeoffs and the difference in speed between the twos.
-
-
+The beauty of the book [Raytracing in one weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)  is that it doesnt use any libraries and instead writes to a ppm file which is a very easy to understand and text based format. 
+Using a highlevel framework like metal which is optimized to output image on the screen, it turn out that it is not that straightforward or useful to output the image creating a ppm file, so I will just conform and create a small app which will output the image to the screen.  The takeaway here is to understand how the metal frameworks handles the rendering of the image and how to use the GPU to do the heavy lifting.  
 
 ## rendering models and pipelines
-To get access to the power of the Apple GPU, typically the CPU creates a command buffer which will be passed to the GPU for rendering.  
+Typically the CPU creates a command buffer which will be passed to the GPU for rendering.  
 Metal works with pipelines for maximum efficiency.  
 
 In ideal conditions, light travels through the air as a ray following a straight line until it hits a surface.  
