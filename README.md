@@ -123,6 +123,8 @@ kernel void compute(texture2d<float, access::write> output [[texture(0)]],
 - The SDF in this case is calculated by finding the distance between the point and the center of the circle and then subtracting the radius. If the distance is less than 0, the point is inside the circle and the color is changed to yellow. The color is then written to the output texture at the current thread position.
 
 ## Playground
+> Playgrounds are a nice idea, but sometimes more trouble than they are worth
+
 Open a playground on macos and select the blank template.  
 We start by importing the MetalKit framework and creating a reference to our GPU. At the same time the code checks if a suitable GPU is found if not it will stop here.
 ```swift
@@ -201,3 +203,4 @@ The `dispatchThreads` method is used to dispatch the threads to the GPU. The `th
 - also following the book Metal by Tutorials -Razeware LLC (2019) by the raywenderlich Tutorial Team, Caroline Begbie, Marius Horga  
 - The resources to the book : https://github.com/kodecocodes/met-materials/tree/editions/4.0/02-3d-models/projects/resources  
 - Some Blender beginner tutorials https://www.kodeco.com/21459096-blender-tutorial-for-beginners-how-to-make-a-mushroom  
+- A great youtube series https://www.youtube.com/playlist?list=PLlrATfBNZ98edc5GshdBtREv5asFW3yXl 
